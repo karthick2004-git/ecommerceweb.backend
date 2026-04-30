@@ -3,12 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "db:push": "prisma db push",
+    "generate": "prisma generate"
   },
   "dependencies": {
+    "@prisma/client": "^6.2.1",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
     "next": "16.2.3",
+    "nodemailer": "^8.0.5",
+    "prisma": "^6.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   }

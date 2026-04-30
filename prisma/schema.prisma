@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
+  password String
+  name     String
+}
+
+model Customer {
+  id          Int      @id @default(autoincrement())
+  name        String
+  email       String   @unique
+  password    String
+  is_verified Boolean  @default(false)
+  created_at  DateTime @default(now())
+  orders      Order[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    String
+  description String   @db.Text
+  price       Int
+  old_price   Int?
+  discount    Int      @default(0)
+  stock       Int      @default(0)
+  sizes       Json?
+  image_url   String   @db.Text
+  created_at  DateTime @default(now())
+  order_items OrderItem[]
+}
+
+model Order {
+  id             Int         @id @default(autoincrement())
+  order_id       String      @unique
+  customer_id    Int?
+  customer       Customer?   @relation(fields: [customer_id], references: [id])
+  customer_name  String
+  email          String
+  phone          String
+  address        String      @db.Text
+  city           String
+  state          String      @default("")
+  district       String      @default("")
+  pincode        String
+  payment_method String
+  total_amount   Int
+  status         String      @default("Placed")
+  created_at     DateTime    @default(now())
+  items          OrderItem[]
+}
+
+model OrderItem {
+  id           Int     @id @default(autoincrement())
+  order_id     Int
+  order        Order   @relation(fields: [order_id], references: [id])
+  product_id   Int
+  product      Product @relation(fields: [product_id], references: [id])
+  product_name String
+  quantity     Int
+  price        Int
+}
+
+model OTP {
+  id         Int      @id @default(autoincrement())
+  email      String
+  otp        String
+  expires_at DateTime
+}
+
+model PaymentSetting {
+  id      Int     @id @default(autoincrement())
+  method  String  @unique
+  enabled Boolean @default(true)
+  config  Json
+}
+
+model Support {
+  id         Int      @id @default(autoincrement())
+  name       String
+  phone      String
+  city       String
+  pincode    String
+  message    String?  @db.Text
+  type       String   @default("Support")
+  status     String   @default("Pending")
+  created_at DateTime @default(now())
+}
+
