@@ -28,13 +28,13 @@ model Product {
   id          Int      @id @default(autoincrement())
   name        String
   category    String
-  description String   @db.Text
+  description String   @db.LongText
   price       Int
   old_price   Int?
   discount    Int      @default(0)
   stock       Int      @default(0)
   sizes       Json?
-  image_url   String   @db.Text
+  image_url   String   @db.LongText
   created_at  DateTime @default(now())
   order_items OrderItem[]
 }
@@ -53,6 +53,8 @@ model Order {
   district       String      @default("")
   pincode        String
   payment_method String
+  transaction_id String?
+  payment_proof  String?     @db.Text
   total_amount   Int
   status         String      @default("Placed")
   created_at     DateTime    @default(now())

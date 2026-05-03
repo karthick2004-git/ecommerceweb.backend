@@ -10,9 +10,12 @@ export async function POST(req) {
     }
 
     const data = await req.json();
+    console.log('Adding product with data:', JSON.stringify(data, (key, value) => key === 'image_url' ? value.substring(0, 50) + '...' : value));
+    
     const { name, category, description, price, old_price, discount, stock, sizes, image_url } = data;
 
     if (!name || !category || !price) {
+      console.log('Missing fields:', { name, category, price });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -34,7 +37,7 @@ export async function POST(req) {
 
     return NextResponse.json({ message: 'Product added successfully', product });
   } catch (error) {
-    console.error('Add product error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Add product error details:', error);
+    return NextResponse.json({ error: `Internal server error: ${error.message}` }, { status: 500 });
   }
 }

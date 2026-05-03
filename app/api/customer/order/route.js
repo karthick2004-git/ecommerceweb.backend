@@ -5,8 +5,36 @@ import { authenticateCustomer } from '@/lib/auth';
 export async function POST(req) {
   try {
     const customer = await authenticateCustomer(req);
-    const body = await req.json();
-    const { items, name, phone, address, city, state, district, pincode, paymentMethod, email: guestEmail } = body;
+    const contentType = req.headers.get('content-type') || '';
+    
+    let body;
+    let paymentProofBase64 = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      body = {
+        items: JSON.parse(formData.get('items')),
+        name: formData.get('name'),
+        phone: formData.get('phone'),
+        address: formData.get('address'),
+        city: formData.get('city'),
+        state: formData.get('state'),
+        district: formData.get('district'),
+        pincode: formData.get('pincode'),
+        paymentMethod: formData.get('paymentMethod'),
+        transactionId: formData.get('transactionId'),
+        email: formData.get('email'),
+      };
+      
+      const file = formData.get('paymentProof');
+      if (file && typeof file !== 'string') {
+        paymentProofBase64 = `Uploaded: ${file.name}`;
+      }
+    } else {
+      body = await req.json();
+    }
+
+    const { items, name, phone, address, city, state, district, pincode, paymentMethod, transactionId, email: guestEmail } = body;
 
     if (!items || items.length === 0 || !phone || !address || !name) {
       return NextResponse.json({ error: 'Missing order details' }, { status: 400 });
@@ -14,33 +42,40 @@ export async function POST(req) {
 
     const orderEmail = customer ? customer.email : (guestEmail || 'guest@example.com');
 
-    // Calculate total and verify stock in a transaction
+    // Step 1: Verify all products and calculate total OUTSIDE the transaction
+    let total = 0;
+    const orderItemsData = [];
+
+    for (const item of items) {
+      const productId = Number(item.id);
+      const product = await prisma.product.findUnique({
+        where: { id: productId }
+      });
+
+      if (!product) {
+        return NextResponse.json({ error: `Product not found (ID: ${productId})` }, { status: 400 });
+      }
+      if (product.stock < (item.quantity || 1)) {
+        return NextResponse.json({ error: `Insufficient stock for ${product.name}` }, { status: 400 });
+      }
+
+      const itemPrice = product.price;
+      total += itemPrice * (item.quantity || 1);
+
+      orderItemsData.push({
+        product_id: product.id,
+        product_name: product.name,
+        quantity: item.quantity || 1,
+        price: itemPrice
+      });
+    }
+
+    // Step 2: Create order and update stock in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      let total = 0;
-      const orderItemsData = [];
-
+      // Decrease stock for each item
       for (const item of items) {
-        const productId = Number(item.id);
-        const product = await tx.product.findUnique({
-          where: { id: productId }
-        });
-
-        if (!product) throw new Error(`Product ${productId} not found`);
-        if (product.stock < (item.quantity || 1)) throw new Error(`Insufficient stock for ${product.name}`);
-
-        const itemPrice = product.price; // Use DB price for security
-        total += itemPrice * (item.quantity || 1);
-
-        orderItemsData.push({
-          product_id: product.id,
-          product_name: product.name,
-          quantity: item.quantity || 1,
-          price: itemPrice
-        });
-
-        // Decrease stock
         await tx.product.update({
-          where: { id: product.id },
+          where: { id: Number(item.id) },
           data: { stock: { decrement: item.quantity || 1 } }
         });
       }
@@ -49,7 +84,7 @@ export async function POST(req) {
       const order = await tx.order.create({
         data: {
           order_id: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-          customer_id: customer ? customer.id : null,
+          customer: customer ? { connect: { id: customer.id } } : undefined,
           customer_name: name,
           email: orderEmail,
           phone,
@@ -59,6 +94,8 @@ export async function POST(req) {
           district: district || '',
           pincode: pincode || '',
           payment_method: paymentMethod,
+          transaction_id: transactionId || null,
+          payment_proof: paymentProofBase64,
           total_amount: total,
           status: 'Placed',
           items: {
@@ -69,6 +106,8 @@ export async function POST(req) {
       });
 
       return order;
+    }, {
+      timeout: 30000
     });
 
     return NextResponse.json({ message: 'Order placed successfully', order: result });

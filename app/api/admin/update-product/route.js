@@ -36,7 +36,7 @@ export async function PUT(req) {
     if (error.code === 'P2025') {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
-    console.error('Update product error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Update product error details:', error);
+    return NextResponse.json({ error: `Internal server error: ${error.message}` }, { status: 500 });
   }
 }
