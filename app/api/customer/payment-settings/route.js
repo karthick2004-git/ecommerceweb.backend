@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const settings = await prisma.paymentSetting.findMany();
@@ -11,26 +13,28 @@ export async function GET() {
     const codSetting = settings.find(s => s.method === 'cod');
 
     if (upiSetting?.enabled) {
+      const resolvedUpiId = upiSetting.config.upiId || upiSetting.config.id || '';
       publicSettings.upi = {
-        upiId: upiSetting.config.id,
-        name: upiSetting.config.name
+        upiId: resolvedUpiId,
+        id: resolvedUpiId,
+        name: upiSetting.config.name || ''
       };
     }
 
     if (qrSetting?.enabled) {
-      // If QR is enabled, we can use its image or fallback to dynamic UPI if available
+      const resolvedUpiId = upiSetting?.config?.upiId || upiSetting?.config?.id || '';
       publicSettings.qr = {
-        image: qrSetting.config.image,
-        // Also provide dynamic details if UPI setting has them
-        upiId: upiSetting?.config?.id,
-        name: upiSetting?.config?.name
+        image: qrSetting.config.image || '',
+        upiId: resolvedUpiId,
+        id: resolvedUpiId,
+        name: upiSetting?.config?.name || ''
       };
       
-      // If publicSettings.upi is missing, populate it from qr for the frontend
-      if (!publicSettings.upi && upiSetting?.config?.id) {
+      if (!publicSettings.upi && resolvedUpiId) {
         publicSettings.upi = {
-          upiId: upiSetting.config.id,
-          name: upiSetting.config.name
+          upiId: resolvedUpiId,
+          id: resolvedUpiId,
+          name: upiSetting.config.name || ''
         };
       }
     }

@@ -6,4 +6,6 @@ async function main() {
   console.log(JSON.stringify(settings, null, 2));
 }
 
-main().catch(console.error).finally(() => prisma.$disconnect());
+main()
+  .catch(e => console.error(e))
+  .finally(async () => await prisma.$disconnect());
