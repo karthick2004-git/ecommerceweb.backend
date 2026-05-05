@@ -13,21 +13,35 @@ export async function GET() {
     const codSetting = settings.find(s => s.method === 'cod');
 
     if (upiSetting?.enabled) {
-      const resolvedUpiId = upiSetting.config.upiId || upiSetting.config.id || '';
+      let config = upiSetting.config || {};
+      // Handle case where config might be a string (JSON not auto-parsed)
+      if (typeof config === 'string') {
+        try { config = JSON.parse(config); } catch(e) { config = {}; }
+      }
+      const resolvedUpiId = config.upiId || config.id || config.vpaId || config.upi_id || '';
+      const resolvedName = config.name || config.displayName || '';
       publicSettings.upi = {
         upiId: resolvedUpiId,
         id: resolvedUpiId,
-        name: upiSetting.config.name || ''
+        name: resolvedName
       };
     }
 
     if (qrSetting?.enabled) {
-      const resolvedUpiId = upiSetting?.config?.upiId || upiSetting?.config?.id || '';
+      let upiConfig = upiSetting?.config || {};
+      if (typeof upiConfig === 'string') {
+        try { upiConfig = JSON.parse(upiConfig); } catch(e) { upiConfig = {}; }
+      }
+      const resolvedUpiId = upiConfig.upiId || upiConfig.id || upiConfig.vpaId || upiConfig.upi_id || '';
+      let qrConfig = qrSetting.config || {};
+      if (typeof qrConfig === 'string') {
+        try { qrConfig = JSON.parse(qrConfig); } catch(e) { qrConfig = {}; }
+      }
       publicSettings.qr = {
-        image: qrSetting.config.image || '',
+        image: qrConfig.image || '',
         upiId: resolvedUpiId,
         id: resolvedUpiId,
-        name: upiSetting?.config?.name || ''
+        name: upiConfig.name || upiConfig.displayName || ''
       };
       
       if (!publicSettings.upi && resolvedUpiId) {
