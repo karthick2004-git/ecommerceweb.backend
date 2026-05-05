@@ -36,7 +36,7 @@ async function main() {
     create: {
       method: 'upi',
       enabled: true,
-      config: { id: 'shop@ybl', name: 'Cozy Hood Store' },
+      config: { upiId: 'shop@ybl', name: 'Cozy Hood Store' },
     },
   });
 

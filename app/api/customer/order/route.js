@@ -27,8 +27,15 @@ export async function POST(req) {
       };
       
       const file = formData.get('paymentProof');
-      if (file && typeof file !== 'string') {
-        paymentProofBase64 = `Uploaded: ${file.name}`;
+      if (file) {
+        if (typeof file === 'string') {
+          paymentProofBase64 = file; // It's already a base64 string from frontend
+        } else {
+          // If it's a file, we can't easily save it here without a bucket, 
+          // but the frontend now sends it as base64. 
+          // We'll keep this as a fallback just in case.
+          paymentProofBase64 = `Uploaded: ${file.name}`;
+        }
       }
     } else {
       body = await req.json();

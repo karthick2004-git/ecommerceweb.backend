@@ -42,12 +42,14 @@ export async function PUT(req) {
       return NextResponse.json({ error: 'Method is required' }, { status: 400 });
     }
 
+    // Build update data - only include fields that were actually sent
+    const updateData = {};
+    if (enabled !== undefined) updateData.enabled = enabled;
+    if (config !== undefined && config !== null) updateData.config = config;
+
     const updated = await prisma.paymentSetting.upsert({
       where: { method },
-      update: {
-        enabled: enabled !== undefined ? enabled : undefined,
-        config: config || undefined
-      },
+      update: updateData,
       create: {
         method,
         enabled: enabled !== undefined ? enabled : true,

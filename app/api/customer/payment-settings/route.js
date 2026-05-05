@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const settings = await prisma.paymentSetting.findMany();
@@ -11,26 +13,42 @@ export async function GET() {
     const codSetting = settings.find(s => s.method === 'cod');
 
     if (upiSetting?.enabled) {
+      let config = upiSetting.config || {};
+      // Handle case where config might be a string (JSON not auto-parsed)
+      if (typeof config === 'string') {
+        try { config = JSON.parse(config); } catch(e) { config = {}; }
+      }
+      const resolvedUpiId = config.upiId || config.id || config.vpaId || config.upi_id || '';
+      const resolvedName = config.name || config.displayName || '';
       publicSettings.upi = {
-        upiId: upiSetting.config.id,
-        name: upiSetting.config.name
+        upiId: resolvedUpiId,
+        id: resolvedUpiId,
+        name: resolvedName
       };
     }
 
     if (qrSetting?.enabled) {
-      // If QR is enabled, we can use its image or fallback to dynamic UPI if available
+      let upiConfig = upiSetting?.config || {};
+      if (typeof upiConfig === 'string') {
+        try { upiConfig = JSON.parse(upiConfig); } catch(e) { upiConfig = {}; }
+      }
+      const resolvedUpiId = upiConfig.upiId || upiConfig.id || upiConfig.vpaId || upiConfig.upi_id || '';
+      let qrConfig = qrSetting.config || {};
+      if (typeof qrConfig === 'string') {
+        try { qrConfig = JSON.parse(qrConfig); } catch(e) { qrConfig = {}; }
+      }
       publicSettings.qr = {
-        image: qrSetting.config.image,
-        // Also provide dynamic details if UPI setting has them
-        upiId: upiSetting?.config?.id,
-        name: upiSetting?.config?.name
+        image: qrConfig.image || '',
+        upiId: resolvedUpiId,
+        id: resolvedUpiId,
+        name: upiConfig.name || upiConfig.displayName || ''
       };
       
-      // If publicSettings.upi is missing, populate it from qr for the frontend
-      if (!publicSettings.upi && upiSetting?.config?.id) {
+      if (!publicSettings.upi && resolvedUpiId) {
         publicSettings.upi = {
-          upiId: upiSetting.config.id,
-          name: upiSetting.config.name
+          upiId: resolvedUpiId,
+          id: resolvedUpiId,
+          name: upiSetting.config.name || ''
         };
       }
     }

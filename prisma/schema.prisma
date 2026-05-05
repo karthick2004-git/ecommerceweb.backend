@@ -54,7 +54,7 @@ model Order {
   pincode        String
   payment_method String
   transaction_id String?
-  payment_proof  String?     @db.Text
+  payment_proof  String?     @db.LongText
   total_amount   Int
   status         String      @default("Placed")
   created_at     DateTime    @default(now())
