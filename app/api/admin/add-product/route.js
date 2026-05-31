@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { authenticateAdmin } from '@/lib/auth';
 
+export const maxDuration = 30;
+
 export async function POST(req) {
   try {
     const admin = await authenticateAdmin(req);
@@ -9,15 +11,17 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const data = await req.json();
-    console.log('Adding product with data:', JSON.stringify(data, (key, value) => key === 'image_url' ? value.substring(0, 50) + '...' : value));
+    const body = await req.text();
+    console.log('Add product - raw body size:', Math.round(body.length / 1024) + 'KB');
     
+    const data = JSON.parse(body);
     const { name, category, description, price, old_price, discount, stock, sizes, image_url, gst_percent, colors, images } = data;
 
     if (!name || !category || !price) {
-      console.log('Missing fields:', { name, category, price });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    console.log('Add product images type:', typeof images, 'isArray:', Array.isArray(images), 'length:', Array.isArray(images) ? images.length : 'N/A');
 
     let normalizedImages = [];
     if (Array.isArray(images)) {
@@ -30,6 +34,7 @@ export async function POST(req) {
         normalizedImages = [];
       }
     }
+    console.log('Normalized images count:', normalizedImages.length);
 
     const final_image_url = image_url || 'https://images.unsplash.com/photo-1556905055-8f358a7a4bc4?q=80&w=2070&auto=format&fit=crop';
 

@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { comparePassword, signToken } from '@/lib/auth';
+import { rateLimit, getClientIP } from '@/lib/rateLimit';
 
 export async function POST(req) {
   try {
+    const ip = getClientIP(req);
+    const { success, resetIn } = rateLimit(`admin-login:${ip}`, 5, 60 * 1000);
+    if (!success) {
+      return NextResponse.json(
+        { error: `Too many login attempts. Try again in ${Math.ceil(resetIn / 1000)}s.` },
+        { status: 429 }
+      );
+    }
+
     const { email, password } = await req.json();
 
     if (!email || !password) {

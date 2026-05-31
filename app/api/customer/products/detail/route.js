@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 
+function normalizeImageList(images) {
+  if (Array.isArray(images)) return images.filter(Boolean);
+  if (typeof images === 'string') {
+    try {
+      const parsed = JSON.parse(images);
+      return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -18,7 +31,12 @@ export async function GET(req) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ product });
+    const normalizedProduct = {
+      ...product,
+      images: normalizeImageList(product.images)
+    };
+
+    return NextResponse.json({ product: normalizedProduct });
   } catch (error) {
     console.error('Fetch product detail error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

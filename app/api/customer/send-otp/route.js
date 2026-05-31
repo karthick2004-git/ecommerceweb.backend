@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
 import { sendOTPEmail } from '@/lib/mail';
+import { rateLimit, getClientIP } from '@/lib/rateLimit';
 
 export async function POST(req) {
   try {
+    const ip = getClientIP(req);
+    const { success, resetIn } = rateLimit(`send-otp:${ip}`, 3, 60 * 1000);
+    if (!success) {
+      return NextResponse.json(
+        { error: `Too many OTP requests. Try again in ${Math.ceil(resetIn / 1000)}s.` },
+        { status: 429 }
+      );
+    }
+
     const { email } = await req.json();
 
     if (!email) {
