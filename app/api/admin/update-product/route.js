@@ -10,7 +10,23 @@ export async function PUT(req) {
     }
 
     const data = await req.json();
-    const { id, name, category, description, price, old_price, discount, stock, sizes, image_url } = data;
+    const { id, name, category, description, price, old_price, discount, stock, sizes, image_url, gst_percent, colors, images } = data;
+
+    let normalizedImages;
+    if (images !== undefined) {
+      if (Array.isArray(images)) {
+        normalizedImages = images.filter(Boolean);
+      } else if (typeof images === 'string') {
+        try {
+          const parsed = JSON.parse(images);
+          normalizedImages = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+        } catch {
+          normalizedImages = [];
+        }
+      } else {
+        normalizedImages = [];
+      }
+    }
 
     if (!id) {
       return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
@@ -28,6 +44,9 @@ export async function PUT(req) {
         stock: stock !== undefined ? Number(stock) : undefined,
         sizes: sizes || undefined,
         image_url,
+        images: images !== undefined ? normalizedImages : undefined,
+        colors: colors !== undefined ? colors : undefined,
+        gst_percent: gst_percent !== undefined ? Number(gst_percent) : undefined,
       },
     });
 

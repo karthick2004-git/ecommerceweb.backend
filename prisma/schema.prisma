@@ -34,7 +34,10 @@ model Product {
   discount    Int      @default(0)
   stock       Int      @default(0)
   sizes       Json?
+  colors      Json?
   image_url   String   @db.LongText
+  images      Json?
+  gst_percent Int      @default(0)
   created_at  DateTime @default(now())
   order_items OrderItem[]
 }
@@ -56,6 +59,7 @@ model Order {
   transaction_id String?
   payment_proof  String?     @db.LongText
   total_amount   Int
+  total_gst      Int         @default(0)
   status         String      @default("Placed")
   created_at     DateTime    @default(now())
   items          OrderItem[]
@@ -70,6 +74,9 @@ model OrderItem {
   product_name String
   quantity     Int
   price        Int
+  size         String?
+  color        String?
+  gst_amount   Int     @default(0)
 }
 
 model OTP {

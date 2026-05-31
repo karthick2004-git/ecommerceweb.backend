@@ -51,7 +51,9 @@ export async function POST(req) {
 
     // Step 1: Verify all products and calculate total OUTSIDE the transaction
     let total = 0;
+    let totalGst = 0;
     const orderItemsData = [];
+    const stockUpdates = [];
 
     for (const item of items) {
       const productId = Number(item.id);
@@ -67,23 +69,56 @@ export async function POST(req) {
       }
 
       const itemPrice = product.price;
-      total += itemPrice * (item.quantity || 1);
+      const itemGstPercent = product.gst_percent || 0;
+      const itemQuantity = item.quantity || 1;
+      
+      const itemGstAmount = Math.round(itemPrice * (itemGstPercent / 100));
+      const itemTotalWithGst = (itemPrice + itemGstAmount) * itemQuantity;
+      
+      total += itemTotalWithGst;
+      totalGst += (itemGstAmount * itemQuantity);
+
+      // Handle size-specific stock
+      let updatedSizes = product.sizes;
+      if (item.size && Array.isArray(product.sizes)) {
+        updatedSizes = product.sizes.map(s => {
+          if (typeof s === 'object' && s.size === item.size) {
+            if (s.stock < itemQuantity) {
+              throw new Error(`Insufficient stock for size ${item.size} of ${product.name}`);
+            }
+            return { ...s, stock: s.stock - itemQuantity };
+          }
+          return s;
+        });
+      }
+
+      stockUpdates.push({
+        id: product.id,
+        decrement: itemQuantity,
+        sizes: updatedSizes
+      });
 
       orderItemsData.push({
         product_id: product.id,
         product_name: product.name,
-        quantity: item.quantity || 1,
-        price: itemPrice
+        quantity: itemQuantity,
+        price: itemPrice,
+        size: item.size || null,
+        color: item.color || null,
+        gst_amount: itemGstAmount
       });
     }
 
     // Step 2: Create order and update stock in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Decrease stock for each item
-      for (const item of items) {
+      for (const update of stockUpdates) {
         await tx.product.update({
-          where: { id: Number(item.id) },
-          data: { stock: { decrement: item.quantity || 1 } }
+          where: { id: update.id },
+          data: { 
+            stock: { decrement: update.decrement },
+            sizes: update.sizes
+          }
         });
       }
 
@@ -104,6 +139,7 @@ export async function POST(req) {
           transaction_id: transactionId || null,
           payment_proof: paymentProofBase64,
           total_amount: total,
+          total_gst: totalGst,
           status: 'Placed',
           items: {
             create: orderItemsData
