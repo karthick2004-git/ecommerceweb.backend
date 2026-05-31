@@ -1,10 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '10mb',
-    },
-  },
+  serverExternalPackages: ['bcryptjs'],
   async headers() {
     const allowedOrigins = process.env.ALLOWED_ORIGINS || 'http://localhost:5173';
     return [
