@@ -1,10 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ['bcryptjs'],
-  experimental: {
-    outputFileTracingIncludes: {
-      '/api/**/*': ['./prisma/ca.pem'],
-    },
+  outputFileTracingIncludes: {
+    '/*': ['./prisma/ca.pem'],
   },
 };
 
