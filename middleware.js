@@ -30,17 +30,17 @@ function applyCorsHeaders(response, origin) {
 
 export function middleware(request) {
   const origin = request.headers.get('origin');
-  const allowedOrigins = getAllowedOrigins();
-  const isAllowed = origin && allowedOrigins.includes(origin);
-
+  
   if (request.method === 'OPTIONS') {
     const response = new NextResponse(null, { status: 204 });
-    return isAllowed ? applyCorsHeaders(response, origin) : response;
+    return applyCorsHeaders(response, origin || '*');
   }
 
   const response = NextResponse.next();
-  if (isAllowed) {
+  if (origin) {
     applyCorsHeaders(response, origin);
+  } else {
+    applyCorsHeaders(response, '*');
   }
   return response;
 }
